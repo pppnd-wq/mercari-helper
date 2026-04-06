@@ -1128,7 +1128,7 @@ function goToMercari() {
   if (err) { alert(err); return; }
 
   localStorage.setItem('mercari_listing_data', JSON.stringify(data));
-  window.open('https://jp.mercari.com/sell/list', '_blank');
+  window.open('https://jp.mercari.com/sell', '_blank');
 
   const script = generateBookmarkletCode(data);
   document.getElementById('bookmarkletLink').href = 'javascript:' + encodeURIComponent(script);
@@ -1349,6 +1349,8 @@ window.addEventListener('load', () => {
   if (condition) condition.value = '目立った傷や汚れなし';
   autoGenDesc();
   try { if (localStorage.getItem('mercari_draft')) loadDraft(); } catch(e) {}
+  // ページ読み込み時にバックグラウンドで先読み（検索を即時化）
+  fetchSheetData().catch(() => {});
 });
 </script>
 </body>
