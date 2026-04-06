@@ -1024,46 +1024,18 @@ function showToast(msg) {
 const SHEET_ID = '16IsPHcgcoZ6OMB2oV7Aq8vnyukdM4Az-GRTOnLj65wQ';
 let sheetCache = null;
 
-// JSONP方式（file://でもCORSを回避できる）
-function fetchSheetData() {
-  if (sheetCache) return Promise.resolve(sheetCache);
-  return new Promise((resolve, reject) => {
-    const cbName = 'sheetCb_' + Date.now();
-    const script = document.createElement('script');
-    const timer = setTimeout(() => {
-      delete window[cbName];
-      script.remove();
-      reject(new Error('タイムアウト'));
-    }, 10000);
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSbtxMh7g8rb4EwLh9kAuzkmBAHoyDBHSVQ1aPJHdz0A1zq48RaM1_UW-PoxrkeFvvBw/exec';
 
-    window[cbName] = function(data) {
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-      if (data.status === 'error') {
-        reject(new Error('シートのアクセス権限エラー'));
-        return;
-      }
-      sheetCache = data.table;
-      resolve(sheetCache);
-    };
-
-    script.onerror = () => {
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-      reject(new Error('スクリプト読み込み失敗'));
-    };
-
-    script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&gid=0`;
-    document.head.appendChild(script);
-  });
+async function fetchSheetData() {
+  if (sheetCache) return sheetCache;
+  const resp = await fetch(APPS_SCRIPT_URL);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  sheetCache = await resp.json();
+  return sheetCache;
 }
 
-// 行から列の値を取得
 function getCellVal(row, colIdx) {
-  if (!row.c || row.c[colIdx] == null) return '';
-  const v = row.c[colIdx].v;
+  const v = row[colIdx];
   return v == null ? '' : String(v).trim();
 }
 
@@ -1079,8 +1051,9 @@ async function lookupSheet() {
 
   try {
     const data = await fetchSheetData();
-    // 列位置: D=3, G=6, AK=36 (0始まり)
-    const row = data.rows.find(r => getCellVal(r, 3) === num);
+    // 列位置: D=3, G=6, AK=36 (0始まり) / 先頭行はヘッダーなのでスキップ
+    const rows = data.slice(1);
+    const row = rows.find(r => getCellVal(r, 3) === num);
     if (!row) {
       statusEl.className = 'lookup-status err';
       statusEl.textContent = `❌ 管理番号「${num}」が見つかりませんでした`;
@@ -1122,14 +1095,15 @@ async function debugSheet() {
   out.textContent = '取得中...';
   try {
     const data = await fetchSheetData();
+    const rows = data.slice(1);
     const num = document.getElementById('mgmtNumber').value.trim();
-    let msg = `✅ 取得成功: ${data.rows.length}行\n`;
+    let msg = `✅ 取得成功: ${rows.length}行\n`;
     msg += `\n【列D(3)の最初の5件】\n`;
-    data.rows.slice(0, 5).forEach((r, i) => {
+    rows.slice(0, 5).forEach((r, i) => {
       msg += `  行${i+2}: 「${getCellVal(r, 3) || '(空)'}」\n`;
     });
     if (num) {
-      const row = data.rows.find(r => getCellVal(r, 3) === num);
+      const row = rows.find(r => getCellVal(r, 3) === num);
       msg += `\n【「${num}」で検索】\n`;
       msg += row
         ? `  見つかった！ G列=${getCellVal(row,6)||'(空)'} / AK列=${getCellVal(row,36)||'(空)'}`
