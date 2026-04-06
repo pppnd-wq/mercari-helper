@@ -336,7 +336,7 @@
     <div class="card-title">📋 説明文の内容を入力</div>
 
     <label>ブランド（ローマ字・漢字）<span class="opt">任意</span><span class="filled-tag" id="brandTag" style="display:none">自動入力済み</span></label>
-    <input type="text" id="brand" placeholder="例：ZARA、ユニクロ、無印良品" oninput="autoGenDesc();autoGenItemName();document.getElementById('brandTag').style.display='none'">
+    <input type="text" id="brand" placeholder="例：ZARA、ユニクロ、無印良品" oninput="autoGenDesc();autoGenItemName();document.getElementById('brandTag').style.display='none'" onblur="autofillBrandKatakana()">
     <label>ブランド（カタカナ）<span class="opt">任意</span></label>
     <input type="text" id="brandKatakana" placeholder="例：ザラ、ユニクロ、ムジルシリョウヒン" oninput="autoGenDesc();autoGenItemName()">
 
@@ -540,6 +540,67 @@
 </div>
 
 <script>
+// ===== ブランドカタカナ辞書 =====
+const BRAND_KANA_DICT = {
+  'ZARA':'ザラ','H&M':'エイチアンドエム','UNIQLO':'ユニクロ','GU':'ジーユー',
+  'GAP':'ギャップ','BEAMS':'ビームス','SHIPS':'シップス',
+  'URBAN RESEARCH':'アーバンリサーチ','JOURNAL STANDARD':'ジャーナルスタンダード',
+  'BAYFLOW':'ベイフロー','TOMORROWLAND':'トゥモローランド','IENA':'イエナ',
+  'UNITED ARROWS':'ユナイテッドアローズ','NOBLE':'ノーブル',
+  'SNIDEL':'スナイデル','FRAY ID':'フレイアイディー','TOCCA':'トッカ',
+  'ANAP':'アナップ','WEGO':'ウィゴー','LOWRYS FARM':'ローリーズファーム',
+  'GLOBAL WORK':'グローバルワーク','MERCURYDUO':'マーキュリーデュオ',
+  'MISCH MASCH':'ミッシュマッシュ','INGNI':'イング','DRWCYS':'ドロシーズ',
+  'ROPE':'ロペ','ROPE PICNIC':'ロペピクニック','KUMIKYOKU':'クミキョク',
+  'INDIVI':'インディヴィ','FOXEY':'フォクシー','ANAYI':'アナイ',
+  'ARMANI':'アルマーニ','GUCCI':'グッチ','PRADA':'プラダ',
+  'CHANEL':'シャネル','LOUIS VUITTON':'ルイヴィトン','HERMES':'エルメス',
+  'DIOR':'ディオール','BURBERRY':'バーバリー','CELINE':'セリーヌ',
+  'SAINT LAURENT':'サンローラン','VALENTINO':'ヴァレンティノ',
+  'VERSACE':'ヴェルサーチェ','FENDI':'フェンディ',
+  'BOTTEGA VENETA':'ボッテガヴェネタ','BALENCIAGA':'バレンシアガ',
+  'MONCLER':'モンクレール','CANADA GOOSE':'カナダグース',
+  'ACNE STUDIOS':'アクネストゥディオズ','COS':'コス','GANNI':'ガニー',
+  'SANDRO':'サンドロ','MAJE':'マジェ','ISABEL MARANT':'イザベルマラン',
+  'A.P.C.':'アーペーセー','APC':'アーペーセー','JACQUEMUS':'ジャックムス',
+  'AMI':'アミ','MAISON KITSUNE':'メゾンキツネ','KENZO':'ケンゾー',
+  'GIVENCHY':'ジバンシィ','LOEWE':'ロエベ','JIL SANDER':'ジルサンダー',
+  'THEORY':'セオリー','HELMUT LANG':'ヘルムートラング',
+  'RICK OWENS':'リックオウエンス','MAISON MARGIELA':'メゾンマルジェラ',
+  'COMME DES GARCONS':'コムデギャルソン','YOHJI YAMAMOTO':'ヨウジヤマモト',
+  'ISSEY MIYAKE':'イッセイミヤケ','SACAI':'サカイ','TOGA':'トーガ',
+  'HYKE':'ハイク','ENFOLD':'エンフォルド','MAME KUROGOUCHI':'マメクロゴウチ',
+  'UN3D':'アンスリード','GRACE CONTINENTAL':'グレースコンチネンタル',
+  'RALPH LAUREN':'ラルフローレン','POLO RALPH LAUREN':'ポロラルフローレン',
+  'TOMMY HILFIGER':'トミーヒルフィガー','CALVIN KLEIN':'カルバンクライン',
+  'KATE SPADE':'ケイトスペード','MICHAEL KORS':'マイケルコース',
+  'COACH':'コーチ','MARC JACOBS':'マークジェイコブス','DIESEL':'ディーゼル',
+  'LEVIS':'リーバイス',"LEVI'S":'リーバイス','ADIDAS':'アディダス',
+  'NIKE':'ナイキ','PUMA':'プーマ','NEW BALANCE':'ニューバランス',
+  'CONVERSE':'コンバース','VANS':'バンズ','REEBOK':'リーボック',
+  'UNDER ARMOUR':'アンダーアーマー','CHAMPION':'チャンピオン',
+  'FILA':'フィラ','LACOSTE':'ラコステ','FRED PERRY':'フレッドペリー',
+  'MANGO':'マンゴ','MASSIMO DUTTI':'マッシモドゥッティ',
+  'TOTEME':'トーテム','NANUSHKA':'ナヌーシュカ',
+  'LANVIN':'ランバン','BANANA REPUBLIC':'バナナリパブリック',
+  'J.CREW':'ジェイクルー','BANANA REPULIC':'バナナリパブリック',
+};
+
+function autofillBrandKatakana() {
+  const brandEl = document.getElementById('brand');
+  const kanaEl  = document.getElementById('brandKatakana');
+  if (!brandEl || !kanaEl || kanaEl.value.trim()) return; // already has katakana
+  const key = brandEl.value.trim().toUpperCase();
+  if (!key) return;
+  const kana = BRAND_KANA_DICT[key];
+  if (kana) {
+    kanaEl.value = kana;
+    autoGenDesc();
+    autoGenItemName();
+    showToast(`カタカナ自動入力: ${kana}`);
+  }
+}
+
 // ===== アイテム種別設定 =====
 const ITEM_TYPES = {
   'ワンピース': {
@@ -685,8 +746,8 @@ function makeMeasureField(f) {
   wrap.innerHTML = `
     <label>${f.label}</label>
     <input type="text" id="${f.id}" inputmode="decimal" placeholder="${f.placeholder}"
-           oninput="autoGenDesc()" autocomplete="off"
-           onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextMeasure(this)}">
+           oninput="autoGenDesc();scheduleFocusNext(this)" autocomplete="off"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();clearTimeout(_advanceTimer);focusNextMeasure(this)}">
     <div class="measure-unit">cm</div>
   `;
   return wrap;
@@ -696,6 +757,15 @@ function focusNextMeasure(el) {
   const all = Array.from(document.querySelectorAll('.measure-field input, #extraMeasures input[data-val]'));
   const idx = all.indexOf(el);
   if (idx !== -1 && idx + 1 < all.length) all[idx + 1].focus();
+}
+
+// iOSでEnterが使えないため、入力が1秒止まったら自動的に次へ進む
+let _advanceTimer = null;
+function scheduleFocusNext(el) {
+  clearTimeout(_advanceTimer);
+  _advanceTimer = setTimeout(() => {
+    if (el.value.trim()) focusNextMeasure(el);
+  }, 900);
 }
 
 // ===== 追加採寸 =====
@@ -711,8 +781,8 @@ function addExtraMeasure() {
            oninput="autoGenDesc()">
     <input type="text" data-val="${id}" inputmode="decimal" placeholder="0"
            style="flex:1;text-align:center;font-size:16px;font-weight:700"
-           oninput="autoGenDesc()"
-           onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextMeasure(this)}">
+           oninput="autoGenDesc();scheduleFocusNext(this)"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();clearTimeout(_advanceTimer);focusNextMeasure(this)}">
     <span style="font-size:11px;color:#aaa">cm</span>
     <button onclick="this.parentElement.remove();autoGenDesc()"
             style="background:#ffebee;border:none;border-radius:6px;padding:6px 10px;color:#e53935;cursor:pointer;font-size:13px">✕</button>
@@ -737,9 +807,9 @@ function getMeasValues() {
   const v = {};
   const allIds = [
     'shoulder','width','sleeve','length',
-    'waist','hip','rise','inseam','thigh',
+    'waist','hip','rise','inseam','thigh','total',
     'top_shoulder','top_width','top_sleeve','top_length',
-    'btm_waist','btm_hip','btm_length','btm_rise','btm_inseam','btm_thigh'
+    'btm_waist','btm_hip','btm_length','btm_rise','btm_inseam','btm_thigh','btm_total'
   ];
   allIds.forEach(id => {
     const el = document.getElementById(id);
@@ -1166,24 +1236,33 @@ async function debugSheet() {
     const data = await fetchSheetData();
     const rows = data.slice(1);
     const num = document.getElementById('mgmtNumber').value.trim();
-    let msg = `✅ 取得成功: 全${rows.length}行\n`;
-    // D列に値がある行を探す
-    const nonEmpty = [];
-    rows.forEach((r, i) => {
-      if (getCellVal(r, 3) !== '' && nonEmpty.length < 5)
-        nonEmpty.push(`  行${i+2}: 「${getCellVal(r, 3)}」`);
-    });
-    msg += `\n【列D(3)に値がある最初の5行】\n`;
-    msg += nonEmpty.length > 0 ? nonEmpty.join('\n') : '  全行空 → 列インデックスが違う可能性あり';
-    msg += `\n\n【ヘッダー行のD列】「${getCellVal(data[0]||[], 3)}」`;
+    const hdr = data[0] || [];
+    let msg = `✅ 取得成功: 全${rows.length}行 / 全${hdr.length}列\n`;
+    // 全列構造を表示（最初の10列）
+    msg += `\n【ヘッダー行（最初の10列）】\n`;
+    for (let i = 0; i < Math.min(10, hdr.length); i++) {
+      const col = i < 26 ? String.fromCharCode(65+i) : 'A'+String.fromCharCode(65+i-26);
+      msg += `  ${col}(${i}): 「${getCellVal(hdr, i)}」\n`;
+    }
+    msg += `\n【2行目データ（最初の10列）】\n`;
+    const row2 = data[1] || [];
+    for (let i = 0; i < Math.min(10, row2.length); i++) {
+      msg += `  列${i}: 「${getCellVal(row2, i)}」\n`;
+    }
     if (num) {
-      const row = rows.find(r => getCellVal(r, 3) === num);
-      const rowNum = rows.find(r => getCellVal(r, 3) === String(Number(num)));
-      const found = row || rowNum;
-      msg += `\n\n【「${num}」で検索】\n`;
-      msg += found
-        ? `  見つかった！ G列=${getCellVal(found,6)||'(空)'} / AK列=${getCellVal(found,36)||'(空)'}`
-        : `  見つからなかった\n  ↑D列の実際の値と比較してください`;
+      // 全列を検索して管理番号がどこにあるか探す
+      let foundCol = -1, foundRow = null;
+      for (let col = 0; col < hdr.length && foundCol === -1; col++) {
+        foundRow = rows.find(r => getCellVal(r, col) === num);
+        if (foundRow) foundCol = col;
+      }
+      msg += `\n【「${num}」を全列で検索】\n`;
+      if (foundCol !== -1) {
+        const colLetter = foundCol < 26 ? String.fromCharCode(65+foundCol) : 'A'+String.fromCharCode(65+foundCol-26);
+        msg += `  ${colLetter}列(${foundCol})で発見！\n  G列(6)=${getCellVal(foundRow,6)} / AK列(36)=${getCellVal(foundRow,36)}`;
+      } else {
+        msg += `  どの列にも見つからなかった\n  ※入力値と完全一致が必要です（スペース・全角半角に注意）`;
+      }
     }
     out.textContent = msg;
   } catch(e) {
