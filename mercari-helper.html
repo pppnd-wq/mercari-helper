@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メルカリ出品ヘルパー</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+      background: #f5f5f5; color: #333; min-height: 100vh;
+    }
+    header {
+      background: #ff4757; color: white;
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 10px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 19px; font-weight: 700; }
+
+    /* アイテム種別タブ */
+    .type-tabs-wrap {
+      background: white;
+      border-bottom: 2px solid #f0f0f0;
+      position: sticky; top: 51px; z-index: 90;
+      overflow-x: auto; white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    .type-tabs { display: inline-flex; padding: 0 16px; gap: 4px; min-width: 100%; }
+    .type-tab {
+      display: inline-flex; flex-direction: column; align-items: center;
+      padding: 10px 16px 8px;
+      border: none; background: none;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      color: #999; cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .type-tab .tab-icon { font-size: 20px; margin-bottom: 2px; }
+    .type-tab.active { color: #ff4757; border-bottom-color: #ff4757; }
+
+    .container { max-width: 680px; margin: 0 auto; padding: 16px 14px 100px; }
+    .card {
+      background: white; border-radius: 12px; padding: 18px;
+      margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700; color: #888;
+      letter-spacing: 0.5px; margin-bottom: 14px;
+      padding-bottom: 10px; border-bottom: 1px solid #f0f0f0;
+    }
+    label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: #555; margin-bottom: 5px; margin-top: 14px;
+    }
+    label:first-of-type { margin-top: 0; }
+    label .req { color: #ff4757; margin-left: 4px; font-size: 11px; }
+    label .opt { color: #aaa; margin-left: 4px; font-size: 11px; font-weight: 400; }
+
+    input[type=text], input[type=number], textarea, select {
+      width: 100%; border: 1.5px solid #e0e0e0; border-radius: 8px;
+      padding: 10px 12px; font-size: 15px; font-family: inherit;
+      color: #333; background: #fafafa;
+      transition: border-color 0.2s, background 0.2s; outline: none;
+    }
+    input[type=text]:focus, input[type=number]:focus, textarea:focus, select:focus {
+      border-color: #ff4757; background: white;
+    }
+    textarea { resize: vertical; }
+    .char-count { font-size: 11px; color: #aaa; text-align: right; margin-top: 3px; }
+
+    /* 採寸グリッド */
+    .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .measure-field label { margin-top: 0; font-size: 12px; color: #888; font-weight: 600; margin-bottom: 4px; }
+    .measure-field input {
+      text-align: center; font-size: 16px; font-weight: 700;
+      padding: 10px 8px; color: #333;
+    }
+    .measure-unit {
+      font-size: 11px; color: #aaa; text-align: center;
+      margin-top: 3px; font-weight: 500;
+    }
+
+    /* セットアップ底部タイプ */
+    .btm-type-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .btm-tab {
+      flex: 1; padding: 8px;
+      border: 1.5px solid #e0e0e0; border-radius: 8px;
+      background: none; font-family: inherit; font-size: 13px;
+      font-weight: 600; color: #999; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btm-tab.active { border-color: #ff4757; background: #fff0f1; color: #ff4757; }
+
+    /* 説明文エリア */
+    .desc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .desc-header-label { font-size: 13px; font-weight: 600; color: #555; }
+    .auto-badge {
+      font-size: 11px; background: #e8f5e9; color: #388e3c;
+      padding: 3px 8px; border-radius: 10px; font-weight: 700;
+    }
+    .manual-badge {
+      font-size: 11px; background: #fff3e0; color: #e65100;
+      padding: 3px 8px; border-radius: 10px; font-weight: 700;
+    }
+    #description {
+      min-height: 300px; font-size: 13px; line-height: 1.7;
+      background: #f9fffe; border-color: #b2dfdb;
+    }
+    #description.manual-mode { background: #fffbf5; border-color: #ffe0b2; }
+    .desc-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .desc-btn {
+      flex: 1; padding: 8px; border-radius: 8px; font-family: inherit;
+      font-size: 12px; font-weight: 700; cursor: pointer; border: none;
+    }
+    .btn-manual { background: #fff3e0; color: #e65100; }
+    .btn-reset { background: #e8f5e9; color: #388e3c; }
+
+    /* ラジオボタン */
+    .radio-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .radio-btn { flex: 1; min-width: 100px; }
+    .radio-btn input { display: none; }
+    .radio-btn label {
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid #e0e0e0; border-radius: 8px;
+      padding: 10px 6px; cursor: pointer; font-size: 13px;
+      font-weight: 500; margin: 0; color: #555; text-align: center;
+      transition: all 0.15s; flex-direction: column; gap: 2px;
+    }
+    .radio-btn input:checked + label {
+      border-color: #ff4757; background: #fff0f1; color: #ff4757; font-weight: 700;
+    }
+
+    /* 価格 */
+    .price-input-wrap { position: relative; }
+    .price-input-wrap::before {
+      content: '¥'; position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); font-size: 17px; color: #555; font-weight: 700;
+    }
+    .price-input-wrap input { padding-left: 28px; font-size: 22px; font-weight: 700; color: #ff4757; }
+    .profit-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; background: #f8f8f8; border-radius: 8px; margin-top: 8px;
+    }
+    .profit-row span { font-size: 13px; color: #888; }
+    .profit-row strong { font-size: 15px; color: #333; font-weight: 700; }
+
+    /* 写真 */
+    .photo-upload-area {
+      border: 2px dashed #ddd; border-radius: 12px; padding: 24px 20px;
+      text-align: center; cursor: pointer; color: #bbb; transition: border-color 0.2s;
+    }
+    .photo-upload-area:hover { border-color: #ff4757; }
+    .photo-count { font-size: 13px; color: #aaa; margin-top: 6px; }
+    .photo-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .photo-thumb-wrap { position: relative; }
+    .photo-thumb { width: 74px; height: 74px; border-radius: 8px; object-fit: cover; border: 1px solid #eee; display: block; }
+    .photo-thumb-del {
+      position: absolute; top: -6px; right: -6px;
+      background: #ff4757; color: white; border: none; border-radius: 50%;
+      width: 20px; height: 20px; font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    input[type=file] { display: none; }
+
+    /* 下部バー */
+    .submit-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white; padding: 10px 16px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
+      display: flex; gap: 10px; z-index: 200;
+    }
+    .btn-mercari {
+      flex: 1; background: #ff4757; color: white; border: none;
+      border-radius: 24px; padding: 14px; font-size: 16px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: background 0.15s, transform 0.1s;
+    }
+    .btn-mercari:active { background: #e83547; transform: scale(0.98); }
+    .btn-save {
+      background: white; color: #ff4757; border: 2px solid #ff4757;
+      border-radius: 24px; padding: 14px 18px; font-size: 14px;
+      font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+
+    /* モーダル */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 500; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white; border-radius: 20px 20px 0 0;
+      padding: 22px 18px 40px; width: 100%; max-width: 680px;
+      max-height: 85vh; overflow-y: auto;
+    }
+    .modal h2 { font-size: 17px; margin-bottom: 4px; }
+    .modal > p { font-size: 13px; color: #666; margin-bottom: 14px; }
+    .modal .close-btn {
+      float: right; background: none; border: none; font-size: 24px;
+      cursor: pointer; color: #aaa; margin-top: -4px;
+    }
+    .notice {
+      background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px;
+      padding: 10px 12px; font-size: 13px; color: #795548; margin-bottom: 14px;
+    }
+    .step { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+    .step-num {
+      background: #ff4757; color: white; width: 24px; height: 24px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+    }
+    .step-content { flex: 1; }
+    .step-content strong { display: block; font-size: 13px; margin-bottom: 3px; }
+    .step-content p { font-size: 12px; color: #666; margin: 0; }
+    .bookmarklet-link {
+      display: inline-block; background: #ff4757; color: white;
+      text-decoration: none; padding: 9px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 700; margin-top: 8px;
+    }
+    .copy-fields { margin-top: 14px; }
+    .copy-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+      padding: 9px 10px; background: #f8f8f8; border-radius: 8px;
+    }
+    .copy-row .field-name { font-size: 11px; color: #888; width: 80px; flex-shrink: 0; }
+    .copy-row .field-val { flex: 1; font-size: 13px; color: #333; word-break: break-all; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .copy-row button {
+      background: #eee; border: none; border-radius: 6px;
+      padding: 6px 10px; font-size: 11px; cursor: pointer; white-space: nowrap;
+    }
+    .copy-row button.copied { background: #4caf50; color: white; }
+
+    .section-divider { font-size: 11px; color: #aaa; text-align: center; margin: 4px 0 10px; }
+
+    /* 管理番号 */
+    .mgmt-row { display: flex; gap: 8px; align-items: center; }
+    .mgmt-row input { flex: 1; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+    .btn-lookup {
+      background: #5c6bc0; color: white; border: none;
+      border-radius: 8px; padding: 10px 16px; font-size: 13px;
+      font-weight: 700; cursor: pointer; font-family: inherit;
+      white-space: nowrap; transition: background 0.15s;
+    }
+    .btn-lookup:disabled { background: #bbb; cursor: default; }
+    .lookup-status {
+      margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+      font-size: 13px; display: none;
+    }
+    .lookup-status.ok  { background: #e8f5e9; color: #2e7d32; display: block; }
+    .lookup-status.err { background: #ffebee; color: #c62828; display: block; }
+    .lookup-status.loading { background: #e8eaf6; color: #3949ab; display: block; }
+    .filled-tag {
+      display: inline-block; background: #e8f5e9; color: #388e3c;
+      font-size: 11px; font-weight: 700; padding: 2px 7px;
+      border-radius: 10px; margin-left: 6px; vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:22px">🛍️</span>
+  <h1>メルカリ出品ヘルパー</h1>
+</header>
+
+<!-- アイテム種別タブ -->
+<div class="type-tabs-wrap">
+  <div class="type-tabs">
+    <button class="type-tab active" data-type="ワンピース" onclick="setItemType('ワンピース',this)">
+      <span class="tab-icon">👗</span>ワンピース
+    </button>
+    <button class="type-tab" data-type="スカート" onclick="setItemType('スカート',this)">
+      <span class="tab-icon">🩱</span>スカート
+    </button>
+    <button class="type-tab" data-type="トップス" onclick="setItemType('トップス',this)">
+      <span class="tab-icon">👚</span>トップス
+    </button>
+    <button class="type-tab" data-type="パンツ" onclick="setItemType('パンツ',this)">
+      <span class="tab-icon">👖</span>パンツ
+    </button>
+    <button class="type-tab" data-type="セットアップ" onclick="setItemType('セットアップ',this)">
+      <span class="tab-icon">👔</span>セットアップ
+    </button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 管理番号 -->
+  <div class="card">
+    <div class="card-title">🔢 管理番号（スプレッドシート連携）</div>
+    <div class="mgmt-row">
+      <input type="text" id="mgmtNumber" placeholder="管理番号を入力" inputmode="numeric"
+             onkeydown="if(event.key==='Enter')lookupSheet()">
+      <button class="btn-lookup" id="lookupBtn" onclick="lookupSheet()">検索</button>
+    </div>
+    <div class="lookup-status" id="lookupStatus"></div>
+    <button onclick="debugSheet()" style="margin-top:8px;background:none;border:1px solid #ccc;border-radius:6px;padding:6px 10px;font-size:11px;color:#aaa;cursor:pointer;font-family:inherit">🔍 データ確認（デバッグ）</button>
+    <div id="debugOut" style="margin-top:8px;font-size:11px;color:#666;background:#f5f5f5;border-radius:6px;padding:8px;display:none;word-break:break-all;line-height:1.6"></div>
+  </div>
+
+  <!-- 写真 -->
+  <div class="card">
+    <div class="card-title">📷 商品の写真</div>
+    <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+      <div style="font-size:32px;margin-bottom:6px">📸</div>
+      <div style="font-size:14px;font-weight:600">タップして写真を追加</div>
+      <div class="photo-count">0 / 20枚</div>
+    </div>
+    <input type="file" id="photoInput" multiple accept="image/*" onchange="handlePhotos(this)">
+    <div class="photo-preview" id="photoPreview"></div>
+  </div>
+
+  <!-- 商品名 -->
+  <div class="card">
+    <div class="card-title">✏️ 商品名（タイトル）</div>
+    <label>商品名<span class="req">必須</span></label>
+    <input type="text" id="itemName" placeholder="例：ユナイテッドアローズ フラワープリントワンピース" maxlength="40"
+           oninput="updateCharCount('itemName','nameCount',40)">
+    <div class="char-count"><span id="nameCount">0</span>/40文字</div>
+  </div>
+
+  <!-- テンプレート詳細入力 -->
+  <div class="card">
+    <div class="card-title">📋 説明文の内容を入力</div>
+
+    <label>ブランド<span class="opt">任意</span><span class="filled-tag" id="brandTag" style="display:none">自動入力済み</span></label>
+    <input type="text" id="brand" placeholder="例：ZARA、ユニクロ、無印良品" oninput="autoGenDesc();document.getElementById('brandTag').style.display='none'">
+
+    <label>○商品（商品の説明）<span class="opt">任意</span></label>
+    <textarea id="itemDetail" rows="3" placeholder="商品の詳細、特徴など" oninput="autoGenDesc()"></textarea>
+
+    <label>検索ワード<span class="opt">任意</span></label>
+    <input type="text" id="searchWord" placeholder="例：ワンピース 花柄 ブランド名" oninput="autoGenDesc()">
+
+    <label>表記サイズ<span class="opt">任意</span><span class="filled-tag" id="sizeTag" style="display:none">自動入力済み</span></label>
+    <input type="text" id="sizeLabel" placeholder="例：M、L、38、one size" oninput="autoGenDesc();document.getElementById('sizeTag').style.display='none'">
+
+    <!-- 採寸フィールド（カテゴリーで動的変更） -->
+    <div id="measureSection"></div>
+
+    <label>カラー<span class="opt">任意</span></label>
+    <input type="text" id="color" placeholder="例：ブラック、オフホワイト、ネイビー" oninput="autoGenDesc()">
+
+    <label>素材<span class="opt">任意</span></label>
+    <input type="text" id="material" placeholder="例：ポリエステル100%、コットン90%・ポリウレタン10%" oninput="autoGenDesc()">
+  </div>
+
+  <!-- 説明文プレビュー -->
+  <div class="card">
+    <div class="desc-header">
+      <span class="desc-header-label">説明文<span class="req">必須</span></span>
+      <span id="descBadge" class="auto-badge">自動生成中</span>
+    </div>
+    <textarea id="description" rows="18" oninput="onDescManualEdit()"></textarea>
+    <div class="char-count"><span id="descCount">0</span>/1000文字</div>
+    <div class="desc-actions">
+      <button class="desc-btn btn-manual" onclick="switchToManual()">✏️ 手動編集モード</button>
+      <button class="desc-btn btn-reset" onclick="resetToAuto()">🔄 自動生成に戻す</button>
+    </div>
+  </div>
+
+  <!-- カテゴリー・状態 -->
+  <div class="card">
+    <div class="card-title">🏷️ カテゴリー・状態</div>
+
+    <label>カテゴリー<span class="req">必須</span></label>
+    <select id="category">
+      <option value="">選択してください</option>
+      <option>レディース</option>
+      <option>メンズ</option>
+      <option>ベビー・キッズ</option>
+      <option>インテリア・住まい・小物</option>
+      <option>本・音楽・ゲーム</option>
+      <option>おもちゃ・ホビー・グッズ</option>
+      <option>コスメ・香水・美容</option>
+      <option>家電・スマホ・カメラ</option>
+      <option>スポーツ・レジャー</option>
+      <option>ハンドメイド</option>
+      <option>チケット</option>
+      <option>自動車・オートバイ</option>
+      <option>食品・飲料・お酒</option>
+      <option>ペット・生き物</option>
+      <option>植物</option>
+      <option>その他</option>
+    </select>
+
+    <label>商品の状態<span class="req">必須</span></label>
+    <select id="condition">
+      <option value="">選択してください</option>
+      <option>新品・未使用</option>
+      <option>未使用に近い</option>
+      <option>目立った傷や汚れなし</option>
+      <option>やや傷や汚れあり</option>
+      <option>傷や汚れあり</option>
+      <option>全体的に状態が悪い</option>
+    </select>
+  </div>
+
+  <!-- 配送情報 -->
+  <div class="card">
+    <div class="card-title">📦 配送情報</div>
+
+    <label>配送料の負担<span class="req">必須</span></label>
+    <div class="radio-group">
+      <div class="radio-btn">
+        <input type="radio" name="shipping_fee" id="fee_seller" value="送料込み（出品者負担）" checked onchange="updateShipping()">
+        <label for="fee_seller">送料込み<small style="font-size:11px;font-weight:400">出品者負担</small></label>
+      </div>
+      <div class="radio-btn">
+        <input type="radio" name="shipping_fee" id="fee_buyer" value="着払い（購入者負担）" onchange="updateShipping()">
+        <label for="fee_buyer">着払い<small style="font-size:11px;font-weight:400">購入者負担</small></label>
+      </div>
+    </div>
+
+    <div id="methodSection">
+      <label>配送の方法<span class="req">必須</span></label>
+      <select id="shippingMethod">
+        <option value="">選択してください</option>
+        <option>らくらくメルカリ便</option>
+        <option>ゆうゆうメルカリ便</option>
+        <option>クロネコヤマト</option>
+        <option>日本郵便</option>
+        <option>佐川急便</option>
+        <option>その他</option>
+      </select>
+    </div>
+
+    <label>発送元の地域<span class="req">必須</span></label>
+    <select id="shipFrom">
+      <option value="">選択してください</option>
+      <option>北海道</option><option>青森県</option><option>岩手県</option>
+      <option>宮城県</option><option>秋田県</option><option>山形県</option>
+      <option>福島県</option><option>茨城県</option><option>栃木県</option>
+      <option>群馬県</option><option>埼玉県</option><option>千葉県</option>
+      <option>東京都</option><option>神奈川県</option><option>新潟県</option>
+      <option>富山県</option><option>石川県</option><option>福井県</option>
+      <option>山梨県</option><option>長野県</option><option>岐阜県</option>
+      <option>静岡県</option><option>愛知県</option><option>三重県</option>
+      <option>滋賀県</option><option>京都府</option><option>大阪府</option>
+      <option>兵庫県</option><option>奈良県</option><option>和歌山県</option>
+      <option>鳥取県</option><option>島根県</option><option>岡山県</option>
+      <option>広島県</option><option>山口県</option><option>徳島県</option>
+      <option>香川県</option><option>愛媛県</option><option>高知県</option>
+      <option>福岡県</option><option>佐賀県</option><option>長崎県</option>
+      <option>熊本県</option><option>大分県</option><option>宮崎県</option>
+      <option>鹿児島県</option><option>沖縄県</option>
+    </select>
+
+    <label>発送までの日数<span class="req">必須</span></label>
+    <div class="radio-group">
+      <div class="radio-btn">
+        <input type="radio" name="ship_days" id="days1" value="1〜2日で発送" checked>
+        <label for="days1">1〜2日</label>
+      </div>
+      <div class="radio-btn">
+        <input type="radio" name="ship_days" id="days2" value="2〜3日で発送">
+        <label for="days2">2〜3日</label>
+      </div>
+      <div class="radio-btn">
+        <input type="radio" name="ship_days" id="days3" value="4〜7日で発送">
+        <label for="days3">4〜7日</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 価格 -->
+  <div class="card">
+    <div class="card-title">💴 販売価格</div>
+
+    <label>価格（300円〜9,999,999円）<span class="req">必須</span></label>
+    <div class="price-input-wrap">
+      <input type="number" id="price" placeholder="0" min="300" max="9999999" oninput="calcProfit()">
+    </div>
+    <div id="profitBox" style="display:none">
+      <div class="profit-row"><span>販売手数料（10%）</span><span id="feeText"></span></div>
+      <div class="profit-row"><span>販売利益</span><strong id="profitText"></strong></div>
+    </div>
+
+    <label style="margin-top:14px">メモ（自分用・非公開）<span class="opt">任意</span></label>
+    <input type="text" id="memo" placeholder="仕入れ値など（メルカリには送信されません）">
+  </div>
+
+</div>
+
+<!-- 下部ボタン -->
+<div class="submit-bar">
+  <button class="btn-save" onclick="saveDraft()">下書き保存</button>
+  <button class="btn-mercari" onclick="goToMercari()">🛍️ メルカリで出品する</button>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h2>🚀 メルカリへ移動しました！</h2>
+    <p>以下の方法で自動入力できます</p>
+    <div class="notice">📌 メルカリの出品ページが新しいタブで開きました。ブックマークレットをクリックすると自動入力を試みます。</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <strong>ブックマークレットをブックマークバーに保存</strong>
+        <p>下のボタンをブックマークバーにドラッグ＆ドロップしてください</p>
+        <a id="bookmarkletLink" href="#" class="bookmarklet-link" onclick="return false;">📋 メルカリ自動入力</a>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <strong>メルカリ出品ページで実行</strong>
+        <p>メルカリのページを開いた状態でブックマークレットをクリック</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <strong>手動コピーも可能</strong>
+        <p>下の「コピー」ボタンで各項目を個別にコピーできます</p>
+      </div>
+    </div>
+    <div class="copy-fields" id="copyFields"></div>
+  </div>
+</div>
+
+<script>
+// ===== アイテム種別設定 =====
+const ITEM_TYPES = {
+  'ワンピース': {
+    fields: [
+      { id: 'shoulder', label: '肩幅', placeholder: '36' },
+      { id: 'width',    label: '身幅', placeholder: '46' },
+      { id: 'sleeve',   label: '袖丈', placeholder: '58' },
+      { id: 'length',   label: '着丈', placeholder: '110' },
+    ],
+    getMeasLine: (v) => `肩幅${v.shoulder||'　'}／身幅${v.width||'　'}／袖丈${v.sleeve||'　'}／着丈${v.length||'　'}(cm）`
+  },
+  'スカート': {
+    fields: [
+      { id: 'waist',  label: 'ウエスト', placeholder: '72' },
+      { id: 'length', label: '着丈',     placeholder: '70' },
+    ],
+    getMeasLine: (v) => `ウエスト${v.waist||'　'}／着丈${v.length||'　'}(cm）`
+  },
+  'トップス': {
+    fields: [
+      { id: 'shoulder', label: '肩幅', placeholder: '36' },
+      { id: 'width',    label: '身幅', placeholder: '46' },
+      { id: 'sleeve',   label: '袖丈', placeholder: '58' },
+      { id: 'length',   label: '着丈', placeholder: '60' },
+    ],
+    getMeasLine: (v) => `肩幅${v.shoulder||'　'}／身幅${v.width||'　'}／袖丈${v.sleeve||'　'}／着丈${v.length||'　'}(cm）`
+  },
+  'パンツ': {
+    fields: [
+      { id: 'waist',  label: 'ウエスト', placeholder: '72' },
+      { id: 'rise',   label: '股上',     placeholder: '28' },
+      { id: 'inseam', label: '股下',     placeholder: '75' },
+      { id: 'thigh',  label: '渡り幅',   placeholder: '30' },
+      { id: 'total',  label: '総丈',     placeholder: '100' },
+    ],
+    getMeasLine: (v) => `ウエスト${v.waist||'　'}／股上${v.rise||'　'}／股下${v.inseam||'　'}／渡り幅${v.thigh||'　'}／総丈${v.total||'　'}(cm）`
+  },
+  'セットアップ': {
+    topFields: [
+      { id: 'top_shoulder', label: '肩幅', placeholder: '36' },
+      { id: 'top_width',    label: '身幅', placeholder: '46' },
+      { id: 'top_sleeve',   label: '袖丈', placeholder: '58' },
+      { id: 'top_length',   label: '着丈', placeholder: '60' },
+    ],
+    btmSkirtFields: [
+      { id: 'btm_waist',  label: 'ウエスト', placeholder: '72' },
+      { id: 'btm_length', label: '着丈',     placeholder: '70' },
+    ],
+    btmPantsFields: [
+      { id: 'btm_waist',  label: 'ウエスト', placeholder: '72' },
+      { id: 'btm_rise',   label: '股上',     placeholder: '28' },
+      { id: 'btm_inseam', label: '股下',     placeholder: '75' },
+      { id: 'btm_thigh',  label: '渡り幅',   placeholder: '30' },
+      { id: 'btm_total',  label: '総丈',     placeholder: '100' },
+    ],
+    getMeasLine: (v, btmType) => {
+      const top = `【トップス】肩幅${v.top_shoulder||'　'}／身幅${v.top_width||'　'}／袖丈${v.top_sleeve||'　'}／着丈${v.top_length||'　'}(cm）`;
+      const btm = btmType === 'pants'
+        ? `【パンツ】ウエスト${v.btm_waist||'　'}／股上${v.btm_rise||'　'}／股下${v.btm_inseam||'　'}／渡り幅${v.btm_thigh||'　'}／総丈${v.btm_total||'　'}(cm）`
+        : `【スカート】ウエスト${v.btm_waist||'　'}／着丈${v.btm_length||'　'}(cm）`;
+      return top + '\n' + btm;
+    }
+  }
+};
+
+let currentType = 'ワンピース';
+let setupBtmType = 'skirt'; // 'skirt' or 'pants'
+let descAutoMode = true;
+
+// ===== アイテム種別切り替え =====
+function setItemType(type, btn) {
+  currentType = type;
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderMeasureSection();
+  autoGenDesc();
+}
+
+function renderMeasureSection() {
+  const sec = document.getElementById('measureSection');
+  const cfg = ITEM_TYPES[currentType];
+
+  if (currentType === 'セットアップ') {
+    sec.innerHTML = `
+      <label>採寸<span class="opt">任意</span></label>
+      <div style="margin-bottom:10px">
+        <div class="btm-type-tabs">
+          <button class="btm-tab ${setupBtmType==='skirt'?'active':''}" onclick="setBtmType('skirt',this)">スカート</button>
+          <button class="btm-tab ${setupBtmType==='pants'?'active':''}" onclick="setBtmType('pants',this)">パンツ</button>
+        </div>
+      </div>
+      <div class="section-divider">── トップス ──</div>
+      <div class="measure-grid" id="topGrid"></div>
+      <div class="section-divider" style="margin-top:12px">── ボトムス ──</div>
+      <div class="measure-grid" id="btmGrid"></div>
+    `;
+    renderSetupFields();
+  } else {
+    const notation = cfg.getMeasLine({});
+    sec.innerHTML = `
+      <label>採寸<span class="opt">任意</span> <span style="font-size:11px;color:#aaa;font-weight:400">${getNotation()}</span></label>
+      <div class="measure-grid" id="mainGrid"></div>
+    `;
+    const grid = document.getElementById('mainGrid');
+    cfg.fields.forEach(f => {
+      grid.appendChild(makeMeasureField(f));
+    });
+  }
+}
+
+function getNotation() {
+  const cfg = ITEM_TYPES[currentType];
+  if (currentType === 'セットアップ') return '';
+  if (currentType === 'スカート') return 'ウエスト／ヒップ／着丈';
+  if (currentType === 'パンツ') return 'ウエスト／ヒップ／股上／股下／渡り幅';
+  return '肩幅／身幅／袖丈／着丈';
+}
+
+function renderSetupFields() {
+  const topGrid = document.getElementById('topGrid');
+  const btmGrid = document.getElementById('btmGrid');
+  if (!topGrid || !btmGrid) return;
+  topGrid.innerHTML = '';
+  btmGrid.innerHTML = '';
+  ITEM_TYPES['セットアップ'].topFields.forEach(f => topGrid.appendChild(makeMeasureField(f)));
+  const btmFields = setupBtmType === 'pants'
+    ? ITEM_TYPES['セットアップ'].btmPantsFields
+    : ITEM_TYPES['セットアップ'].btmSkirtFields;
+  btmFields.forEach(f => btmGrid.appendChild(makeMeasureField(f)));
+}
+
+function setBtmType(type, btn) {
+  setupBtmType = type;
+  document.querySelectorAll('.btm-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderSetupFields();
+  autoGenDesc();
+}
+
+function makeMeasureField(f) {
+  const wrap = document.createElement('div');
+  wrap.className = 'measure-field';
+  wrap.innerHTML = `
+    <label>${f.label}</label>
+    <input type="text" id="${f.id}" inputmode="decimal" placeholder="${f.placeholder}"
+           oninput="autoGenDesc()" autocomplete="off">
+    <div class="measure-unit">cm</div>
+  `;
+  return wrap;
+}
+
+// ===== 採寸値取得 =====
+function getMeasValues() {
+  const v = {};
+  const allIds = [
+    'shoulder','width','sleeve','length',
+    'waist','hip','rise','inseam','thigh',
+    'top_shoulder','top_width','top_sleeve','top_length',
+    'btm_waist','btm_hip','btm_length','btm_rise','btm_inseam','btm_thigh'
+  ];
+  allIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) v[id] = el.value.trim();
+  });
+  return v;
+}
+
+// ===== テンプレート生成 =====
+function generateTemplate() {
+  const brand      = (document.getElementById('brand')?.value || '').trim();
+  const itemDetail = (document.getElementById('itemDetail')?.value || '').trim();
+  const searchWord = (document.getElementById('searchWord')?.value || '').trim();
+  const sizeLabel  = (document.getElementById('sizeLabel')?.value || '').trim();
+  const color      = (document.getElementById('color')?.value || '').trim();
+  const material   = (document.getElementById('material')?.value || '').trim();
+  const v          = getMeasValues();
+
+  let measLine = '';
+  const cfg = ITEM_TYPES[currentType];
+  if (currentType === 'セットアップ') {
+    measLine = cfg.getMeasLine(v, setupBtmType);
+  } else {
+    measLine = cfg.getMeasLine(v);
+  }
+
+  return `お得なフォロー割あります♩
+詳しくはプロフィールをご覧ください！
+
+
+○商品
+${itemDetail}
+
+↓をネットで検索していただくと着用画像がご覧いただけます◎
+「${searchWord}」
+
+
+○ブランド
+${brand}
+
+
+○サイズ
+表記サイズ：${sizeLabel}
+${measLine}
+
+※素人平置き採寸のため、多少の誤差はご了承ください。
+
+
+○カラー
+${color}
+
+
+○素材
+${material}
+
+
+○状態
+目立った傷や汚れ等なく、まだまたまご使用いただけるお品です。
+
+※状態はあくまで主観です。全ての細かいダメージを表現しきることはできませんので、神経質な方は購入をお控えください
+
+
+○配送
+簡易包装にて1〜2日程度で発送いたします。
+仕事の都合で遅れる場合がございますのでご了承ください。
+
+
+○注意点
+・発送はコンパクトに折畳ませて頂きます。畳みジワはご容赦くださいm(_ _)m
+・万が一、不具合がございましたら、必ず【評価の前】にご連絡ください。早急に相応の対応をさせていただきます。
+
+
+
+ご不明点があればお気軽にお問い合わせください(^_^)★
+
+#momochanの古着`;
+}
+
+// ===== 説明文自動生成 =====
+function autoGenDesc() {
+  if (!descAutoMode) return;
+  const desc = document.getElementById('description');
+  const text = generateTemplate();
+  desc.value = text;
+  document.getElementById('descCount').textContent = text.length;
+}
+
+function onDescManualEdit() {
+  descAutoMode = false;
+  document.getElementById('descBadge').className = 'manual-badge';
+  document.getElementById('descBadge').textContent = '手動編集中';
+  document.getElementById('description').classList.add('manual-mode');
+  const len = document.getElementById('description').value.length;
+  document.getElementById('descCount').textContent = len;
+}
+
+function switchToManual() {
+  descAutoMode = false;
+  document.getElementById('descBadge').className = 'manual-badge';
+  document.getElementById('descBadge').textContent = '手動編集中';
+  document.getElementById('description').classList.add('manual-mode');
+  document.getElementById('description').focus();
+  showToast('手動編集モードに切り替えました');
+}
+
+function resetToAuto() {
+  descAutoMode = true;
+  document.getElementById('descBadge').className = 'auto-badge';
+  document.getElementById('descBadge').textContent = '自動生成中';
+  document.getElementById('description').classList.remove('manual-mode');
+  autoGenDesc();
+  showToast('自動生成に戻しました');
+}
+
+// ===== 写真 =====
+let photoFiles = [];
+
+function handlePhotos(input) {
+  const files = Array.from(input.files);
+  const remaining = 20 - photoFiles.length;
+  photoFiles = photoFiles.concat(files.slice(0, remaining));
+  renderPhotos();
+  input.value = '';
+}
+
+function renderPhotos() {
+  const preview = document.getElementById('photoPreview');
+  preview.innerHTML = '';
+  const countEl = document.querySelector('.photo-count');
+  if (countEl) countEl.textContent = `${photoFiles.length} / 20枚`;
+  photoFiles.forEach((file, i) => {
+    const url = URL.createObjectURL(file);
+    const wrap = document.createElement('div');
+    wrap.className = 'photo-thumb-wrap';
+    wrap.innerHTML = `<img src="${url}" class="photo-thumb">
+      <button class="photo-thumb-del" onclick="removePhoto(${i})">×</button>`;
+    preview.appendChild(wrap);
+  });
+}
+
+function removePhoto(i) {
+  photoFiles.splice(i, 1);
+  renderPhotos();
+}
+
+// ===== 文字数カウント =====
+function updateCharCount(inputId, countId, max) {
+  document.getElementById(countId).textContent = document.getElementById(inputId).value.length;
+}
+
+// ===== 配送方法 =====
+function updateShipping() {
+  const seller = document.getElementById('fee_seller').checked;
+  document.getElementById('methodSection').style.display = seller ? 'block' : 'none';
+}
+
+// ===== 利益計算 =====
+function calcProfit() {
+  const price = parseInt(document.getElementById('price').value) || 0;
+  const box = document.getElementById('profitBox');
+  if (price >= 300) {
+    const fee = Math.floor(price * 0.1);
+    document.getElementById('feeText').textContent = `−¥${fee.toLocaleString()}`;
+    document.getElementById('profitText').textContent = `¥${(price - fee).toLocaleString()}`;
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+// ===== データ収集 =====
+function collectData() {
+  return {
+    itemType: currentType,
+    setupBtmType,
+    itemName:       document.getElementById('itemName').value,
+    description:    document.getElementById('description').value,
+    brand:          document.getElementById('brand').value,
+    itemDetail:     document.getElementById('itemDetail').value,
+    searchWord:     document.getElementById('searchWord').value,
+    sizeLabel:      document.getElementById('sizeLabel').value,
+    color:          document.getElementById('color').value,
+    material:       document.getElementById('material').value,
+    measurements:   getMeasValues(),
+    category:       document.getElementById('category').value,
+    condition:      document.getElementById('condition').value,
+    shippingFee:    document.querySelector('input[name="shipping_fee"]:checked')?.value || '',
+    shippingMethod: document.getElementById('shippingMethod').value,
+    shipFrom:       document.getElementById('shipFrom').value,
+    shipDays:       document.querySelector('input[name="ship_days"]:checked')?.value || '',
+    price:          document.getElementById('price').value,
+    memo:           document.getElementById('memo').value,
+    savedAt:        new Date().toISOString()
+  };
+}
+
+// ===== バリデーション =====
+function validate(data) {
+  if (!data.itemName) return '商品名を入力してください';
+  if (!data.description) return '説明文を入力してください';
+  if (!data.category) return 'カテゴリーを選択してください';
+  if (!data.condition) return '商品の状態を選択してください';
+  if (!data.shipFrom) return '発送元の地域を選択してください';
+  if (!data.price || parseInt(data.price) < 300) return '販売価格を300円以上で入力してください';
+  return null;
+}
+
+// ===== 下書き保存 =====
+function saveDraft() {
+  localStorage.setItem('mercari_draft', JSON.stringify(collectData()));
+  showToast('下書きを保存しました ✓');
+}
+
+// ===== 下書き読み込み =====
+function loadDraft() {
+  const saved = localStorage.getItem('mercari_draft');
+  if (!saved) return;
+  const data = JSON.parse(saved);
+  if (!confirm('前回の下書きがあります。読み込みますか？')) return;
+
+  // アイテム種別
+  if (data.itemType) {
+    const tab = document.querySelector(`.type-tab[data-type="${data.itemType}"]`);
+    if (tab) { currentType = data.itemType; setItemType(data.itemType, tab); }
+  }
+  if (data.setupBtmType) setupBtmType = data.setupBtmType;
+
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  setVal('itemName', data.itemName);
+  setVal('brand', data.brand);
+  setVal('itemDetail', data.itemDetail);
+  setVal('searchWord', data.searchWord);
+  setVal('sizeLabel', data.sizeLabel);
+  setVal('color', data.color);
+  setVal('material', data.material);
+  setVal('category', data.category);
+  setVal('condition', data.condition);
+  setVal('shippingMethod', data.shippingMethod);
+  setVal('shipFrom', data.shipFrom);
+  setVal('price', data.price);
+  setVal('memo', data.memo);
+
+  // 採寸
+  if (data.measurements) {
+    Object.entries(data.measurements).forEach(([id, val]) => setVal(id, val));
+  }
+  // ラジオ
+  if (data.shippingFee === '着払い（購入者負担）') {
+    document.getElementById('fee_buyer').checked = true; updateShipping();
+  }
+  if (data.shipDays) {
+    document.querySelectorAll('input[name="ship_days"]').forEach(r => { if (r.value === data.shipDays) r.checked = true; });
+  }
+  updateCharCount('itemName','nameCount',40);
+  calcProfit();
+  autoGenDesc();
+}
+
+// ===== メルカリへ =====
+function goToMercari() {
+  const data = collectData();
+  const err = validate(data);
+  if (err) { alert(err); return; }
+
+  localStorage.setItem('mercari_listing_data', JSON.stringify(data));
+  window.open('https://jp.mercari.com/sell/list', '_blank');
+
+  const script = generateBookmarkletCode(data);
+  document.getElementById('bookmarkletLink').href = 'javascript:' + encodeURIComponent(script);
+  buildCopyFields(data);
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+// ===== ブックマークレット =====
+function generateBookmarkletCode(data) {
+  const d = JSON.stringify(data);
+  return `(function(){var data=${d};function setVal(el,v){var setter=(Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value')||Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value')||{}).set;var tr=el._valueTracker;if(setter)setter.call(el,v);if(tr)tr.setValue('');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}document.querySelectorAll('input[type=text],input[type=number]').forEach(function(el){var ph=el.placeholder||'',na=el.name||'';if((ph.includes('タイトル')||ph.includes('商品名')||na.includes('name'))&&data.itemName)setVal(el,data.itemName);if((ph.includes('ブランド')||na.includes('brand'))&&data.brand)setVal(el,data.brand);if((ph.includes('価格')||na.includes('price'))&&data.price)setVal(el,data.price);});document.querySelectorAll('textarea').forEach(function(el){if(data.description)setVal(el,data.description);});alert('自動入力を試みました！\\n確認して必要な項目を手動で補完してください。');})()`;
+}
+
+// ===== コピー欄 =====
+function buildCopyFields(data) {
+  const fields = [
+    { name: '商品名',   val: data.itemName },
+    { name: '説明文',   val: data.description },
+    { name: 'ブランド', val: data.brand },
+    { name: 'カテゴリ', val: data.category },
+    { name: '状態',     val: data.condition },
+    { name: '配送料',   val: data.shippingFee },
+    { name: '配送方法', val: data.shippingMethod },
+    { name: '発送元',   val: data.shipFrom },
+    { name: '発送日数', val: data.shipDays },
+    { name: '価格',     val: data.price ? `¥${parseInt(data.price).toLocaleString()}` : '' },
+  ].filter(f => f.val);
+
+  const container = document.getElementById('copyFields');
+  container.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:8px">📋 各項目をコピー</div>';
+  fields.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'copy-row';
+    const preview = f.val.replace(/\n/g,'↵').substring(0,50) + (f.val.length > 50 ? '…' : '');
+    row.innerHTML = `<span class="field-name">${f.name}</span>
+      <span class="field-val">${preview}</span>
+      <button onclick="copyText(this,'${escJs(f.val)}')">コピー</button>`;
+    container.appendChild(row);
+  });
+}
+
+function escJs(s) {
+  return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'');
+}
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text.replace(/\\n/g,'\n')).then(() => {
+    btn.textContent = '✓ 完了'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ===== モーダル =====
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+function closeModalIfBg(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+// ===== トースト =====
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:10px 20px;border-radius:20px;font-size:14px;z-index:999;opacity:0;transition:opacity 0.3s;white-space:nowrap';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.style.opacity = '1');
+  setTimeout(() => { t.style.opacity='0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+// ===== スプレッドシート連携 =====
+const SHEET_ID = '16IsPHcgcoZ6OMB2oV7Aq8vnyukdM4Az-GRTOnLj65wQ';
+let sheetCache = null;
+
+// JSONP方式（file://でもCORSを回避できる）
+function fetchSheetData() {
+  if (sheetCache) return Promise.resolve(sheetCache);
+  return new Promise((resolve, reject) => {
+    const cbName = 'sheetCb_' + Date.now();
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      script.remove();
+      reject(new Error('タイムアウト'));
+    }, 10000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+      if (data.status === 'error') {
+        reject(new Error('シートのアクセス権限エラー'));
+        return;
+      }
+      sheetCache = data.table;
+      resolve(sheetCache);
+    };
+
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+      reject(new Error('スクリプト読み込み失敗'));
+    };
+
+    script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&gid=0`;
+    document.head.appendChild(script);
+  });
+}
+
+// 行から列の値を取得
+function getCellVal(row, colIdx) {
+  if (!row.c || row.c[colIdx] == null) return '';
+  const v = row.c[colIdx].v;
+  return v == null ? '' : String(v).trim();
+}
+
+async function lookupSheet() {
+  const num = document.getElementById('mgmtNumber').value.trim();
+  if (!num) return;
+
+  const statusEl = document.getElementById('lookupStatus');
+  const btn = document.getElementById('lookupBtn');
+  btn.disabled = true;
+  statusEl.className = 'lookup-status loading';
+  statusEl.textContent = '🔄 スプレッドシートを検索中...';
+
+  try {
+    const data = await fetchSheetData();
+    // 列位置: D=3, G=6, AK=36 (0始まり)
+    const row = data.rows.find(r => getCellVal(r, 3) === num);
+    if (!row) {
+      statusEl.className = 'lookup-status err';
+      statusEl.textContent = `❌ 管理番号「${num}」が見つかりませんでした`;
+      btn.disabled = false;
+      return;
+    }
+
+    let filled = [];
+    const brand = getCellVal(row, 6);
+    const size  = getCellVal(row, 36);
+    if (brand) {
+      document.getElementById('brand').value = brand;
+      document.getElementById('brandTag').style.display = 'inline';
+      filled.push(`ブランド: ${brand}`);
+    }
+    if (size) {
+      document.getElementById('sizeLabel').value = size;
+      document.getElementById('sizeTag').style.display = 'inline';
+      filled.push(`サイズ: ${size}`);
+    }
+    if (filled.length) autoGenDesc();
+
+    statusEl.className = 'lookup-status ok';
+    statusEl.textContent = filled.length
+      ? `✅ 自動入力しました → ${filled.join(' / ')}`
+      : `✅ 管理番号「${num}」が見つかりましたが、ブランド・サイズ列が空です`;
+
+  } catch (e) {
+    sheetCache = null; // キャッシュクリアして次回再試行可能に
+    statusEl.className = 'lookup-status err';
+    statusEl.textContent = `❌ 取得失敗: ${e.message}。シートが「リンクで共有」になっているか確認してください。`;
+  }
+  btn.disabled = false;
+}
+
+async function debugSheet() {
+  const out = document.getElementById('debugOut');
+  out.style.display = 'block';
+  out.textContent = '取得中...';
+  try {
+    const data = await fetchSheetData();
+    const num = document.getElementById('mgmtNumber').value.trim();
+    let msg = `✅ 取得成功: ${data.rows.length}行\n`;
+    msg += `\n【列D(3)の最初の5件】\n`;
+    data.rows.slice(0, 5).forEach((r, i) => {
+      msg += `  行${i+2}: 「${getCellVal(r, 3) || '(空)'}」\n`;
+    });
+    if (num) {
+      const row = data.rows.find(r => getCellVal(r, 3) === num);
+      msg += `\n【「${num}」で検索】\n`;
+      msg += row
+        ? `  見つかった！ G列=${getCellVal(row,6)||'(空)'} / AK列=${getCellVal(row,36)||'(空)'}`
+        : `  見つからなかった\n  ※D列の実際の値と入力値を確認してください`;
+    }
+    out.textContent = msg;
+  } catch(e) {
+    sheetCache = null;
+    out.textContent = `❌ エラー: ${e.message}`;
+  }
+}
+
+// ===== 初期化 =====
+window.addEventListener('load', () => {
+  renderMeasureSection();
+  updateShipping();
+  autoGenDesc();
+  if (localStorage.getItem('mercari_draft')) loadDraft();
+});
+</script>
+</body>
+</html>
