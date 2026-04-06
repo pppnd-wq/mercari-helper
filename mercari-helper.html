@@ -507,7 +507,9 @@
     <h2>📋 各項目をコピー</h2>
     <p style="font-size:13px;color:#666;margin-bottom:4px">メルカリの入力欄に貼り付けてください</p>
     <div style="margin-bottom:12px">
-      <a id="bookmarkletLink" href="#" class="bookmarklet-link" style="font-size:12px;padding:7px 12px">🤖 自動入力ブックマークレット（PC用）</a>
+      <a id="bookmarkletLink" href="#" class="bookmarklet-link" style="font-size:12px;padding:7px 12px" onclick="return false;">🤖 自動入力（ドラッグしてブックマークバーへ）</a>
+      <div style="margin-top:8px;font-size:12px;color:#888">↑ このボタンをブックマークバーへドラッグ、またはURLをコピーして手動で登録</div>
+      <button onclick="copyBookmarkletUrl()" style="margin-top:6px;background:#f0f0f0;border:none;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;font-family:inherit" id="copyBmBtn">📋 ブックマーク用URLをコピー</button>
     </div>
     <div class="copy-fields" id="copyFields"></div>
   </div>
@@ -1164,6 +1166,17 @@ function copyText(btn, text) {
   navigator.clipboard.writeText(text.replace(/\\n/g,'\n')).then(() => {
     btn.textContent = '✓ 完了'; btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ===== ブックマークURL コピー =====
+function copyBookmarkletUrl() {
+  const link = document.getElementById('bookmarkletLink');
+  const url = link.href;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyBmBtn');
+    btn.textContent = '✅ コピーしました！';
+    setTimeout(() => btn.textContent = '📋 ブックマーク用URLをコピー', 2000);
   });
 }
 
