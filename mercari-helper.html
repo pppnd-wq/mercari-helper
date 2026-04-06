@@ -484,16 +484,10 @@
   <!-- 価格 -->
   <div class="card">
     <div class="card-title">💴 販売価格</div>
-
     <label>価格（300円〜9,999,999円）<span class="req">必須</span></label>
     <div class="price-input-wrap">
-      <input type="number" id="price" placeholder="0" min="300" max="9999999" oninput="calcProfit()">
+      <input type="number" id="price" placeholder="0" min="300" max="9999999">
     </div>
-    <div id="profitBox" style="display:none">
-      <div class="profit-row"><span>販売手数料（10%）</span><span id="feeText"></span></div>
-      <div class="profit-row"><span>販売利益</span><strong id="profitText"></strong></div>
-    </div>
-
     <label style="margin-top:14px">メモ（自分用・非公開）<span class="opt">任意</span></label>
     <input type="text" id="memo" placeholder="仕入れ値など（メルカリには送信されません）">
   </div>
@@ -510,30 +504,10 @@
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
   <div class="modal">
     <button class="close-btn" onclick="closeModal()">×</button>
-    <h2>🚀 メルカリへ移動しました！</h2>
-    <p>以下の方法で自動入力できます</p>
-    <div class="notice">📌 メルカリの出品ページが新しいタブで開きました。ブックマークレットをクリックすると自動入力を試みます。</div>
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-content">
-        <strong>ブックマークレットをブックマークバーに保存</strong>
-        <p>下のボタンをブックマークバーにドラッグ＆ドロップしてください</p>
-        <a id="bookmarkletLink" href="#" class="bookmarklet-link" onclick="return false;">📋 メルカリ自動入力</a>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-content">
-        <strong>メルカリ出品ページで実行</strong>
-        <p>メルカリのページを開いた状態でブックマークレットをクリック</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-content">
-        <strong>手動コピーも可能</strong>
-        <p>下の「コピー」ボタンで各項目を個別にコピーできます</p>
-      </div>
+    <h2>📋 各項目をコピー</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:4px">メルカリの入力欄に貼り付けてください</p>
+    <div style="margin-bottom:12px">
+      <a id="bookmarkletLink" href="#" class="bookmarklet-link" style="font-size:12px;padding:7px 12px">🤖 自動入力ブックマークレット（PC用）</a>
     </div>
     <div class="copy-fields" id="copyFields"></div>
   </div>
@@ -1019,19 +993,6 @@ function updateShipping() {
   document.getElementById('methodSection').style.display = seller ? 'block' : 'none';
 }
 
-// ===== 利益計算 =====
-function calcProfit() {
-  const price = parseInt(document.getElementById('price').value) || 0;
-  const box = document.getElementById('profitBox');
-  if (price >= 300) {
-    const fee = Math.floor(price * 0.1);
-    document.getElementById('feeText').textContent = `−¥${fee.toLocaleString()}`;
-    document.getElementById('profitText').textContent = `¥${(price - fee).toLocaleString()}`;
-    box.style.display = 'block';
-  } else {
-    box.style.display = 'none';
-  }
-}
 
 // ===== データ収集 =====
 function collectData() {
@@ -1128,7 +1089,7 @@ function goToMercari() {
   if (err) { alert(err); return; }
 
   localStorage.setItem('mercari_listing_data', JSON.stringify(data));
-  window.open('https://jp.mercari.com/sell', '_blank');
+  window.open('https://jp.mercari.com/sell/create', '_blank');
 
   const script = generateBookmarkletCode(data);
   document.getElementById('bookmarkletLink').href = 'javascript:' + encodeURIComponent(script);
@@ -1139,7 +1100,32 @@ function goToMercari() {
 // ===== ブックマークレット =====
 function generateBookmarkletCode(data) {
   const d = JSON.stringify(data);
-  return `(function(){var data=${d};function setVal(el,v){var setter=(Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value')||Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value')||{}).set;var tr=el._valueTracker;if(setter)setter.call(el,v);if(tr)tr.setValue('');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}document.querySelectorAll('input[type=text],input[type=number]').forEach(function(el){var ph=el.placeholder||'',na=el.name||'';if((ph.includes('タイトル')||ph.includes('商品名')||na.includes('name'))&&data.itemName)setVal(el,data.itemName);if((ph.includes('ブランド')||na.includes('brand'))&&data.brand)setVal(el,data.brand);if((ph.includes('価格')||na.includes('price'))&&data.price)setVal(el,data.price);});document.querySelectorAll('textarea').forEach(function(el){if(data.description)setVal(el,data.description);});alert('自動入力を試みました！\\n確認して必要な項目を手動で補完してください。');})()`;
+  return `(function(){
+var data=${d};
+function setReact(el,v){
+  try{
+    var proto=el.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;
+    var setter=Object.getOwnPropertyDescriptor(proto,'value').set;
+    setter.call(el,v);
+  }catch(e){el.value=v;}
+  el.dispatchEvent(new Event('focus',{bubbles:true}));
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+  el.dispatchEvent(new Event('change',{bubbles:true}));
+  el.dispatchEvent(new Event('blur',{bubbles:true}));
+}
+var filled=[];
+var nameEl=document.querySelector('input[name="name"]');
+if(nameEl&&data.itemName){setReact(nameEl,data.itemName);filled.push('商品名');}
+var descEl=document.querySelector('textarea[name="description"]');
+if(descEl&&data.description){setReact(descEl,data.description);filled.push('説明文');}
+var priceEl=document.querySelector('input[name="price"],input[data-testid="price-text-input"]');
+if(priceEl&&data.price){setReact(priceEl,String(data.price));filled.push('価格');}
+if(filled.length){
+  alert('✅ 自動入力完了！\\n入力項目: '+filled.join(' / ')+'\\n\\n手動で入力が必要:\\n写真 / カテゴリー / 商品の状態 / 配送方法');
+}else{
+  alert('❌ 入力できませんでした。メルカリの出品ページ(jp.mercari.com/sell/create)で実行してください。');
+}
+})()`.replace(/\n/g,'');
 }
 
 // ===== コピー欄 =====
