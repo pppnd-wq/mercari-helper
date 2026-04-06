@@ -297,7 +297,7 @@
     <div class="card-title">🔢 管理番号（スプレッドシート連携）</div>
     <div class="mgmt-row">
       <input type="text" id="mgmtNumber" placeholder="管理番号を入力" inputmode="numeric"
-             onkeydown="if(event.key==='Enter')lookupSheet()">
+             oninput="autoGenItemName()" onkeydown="if(event.key==='Enter')lookupSheet()">
       <button class="btn-lookup" id="lookupBtn" onclick="lookupSheet()">検索</button>
     </div>
     <div class="lookup-status" id="lookupStatus"></div>
@@ -320,9 +320,14 @@
   <!-- 商品名 -->
   <div class="card">
     <div class="card-title">✏️ 商品名（タイトル）</div>
-    <label>商品名<span class="req">必須</span></label>
-    <input type="text" id="itemName" placeholder="例：ユナイテッドアローズ フラワープリントワンピース" maxlength="40"
-           oninput="updateCharCount('itemName','nameCount',40)">
+    <label>アイテム名<span class="req">必須</span></label>
+    <input type="text" id="itemNameBase" placeholder="例：フラワープリントワンピース" oninput="autoGenItemName()">
+    <label style="margin-top:12px">商品名（自動生成）<span class="req">必須</span></label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="itemName" placeholder="管理番号＋ブランド＋アイテム名" maxlength="40"
+             oninput="updateCharCount('itemName','nameCount',40)" style="flex:1">
+      <button onclick="autoGenItemName()" style="background:#eee;border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;white-space:nowrap">🔄 生成</button>
+    </div>
     <div class="char-count"><span id="nameCount">0</span>/40文字</div>
   </div>
 
@@ -330,8 +335,10 @@
   <div class="card">
     <div class="card-title">📋 説明文の内容を入力</div>
 
-    <label>ブランド<span class="opt">任意</span><span class="filled-tag" id="brandTag" style="display:none">自動入力済み</span></label>
-    <input type="text" id="brand" placeholder="例：ZARA、ユニクロ、無印良品" oninput="autoGenDesc();document.getElementById('brandTag').style.display='none'">
+    <label>ブランド（ローマ字・漢字）<span class="opt">任意</span><span class="filled-tag" id="brandTag" style="display:none">自動入力済み</span></label>
+    <input type="text" id="brand" placeholder="例：ZARA、ユニクロ、無印良品" oninput="autoGenDesc();autoGenItemName();document.getElementById('brandTag').style.display='none'">
+    <label>ブランド（カタカナ）<span class="opt">任意</span></label>
+    <input type="text" id="brandKatakana" placeholder="例：ザラ、ユニクロ、ムジルシリョウヒン" oninput="autoGenDesc();autoGenItemName()">
 
     <label>○商品（商品の説明）<span class="opt">任意</span></label>
     <textarea id="itemDetail" rows="3" placeholder="商品の詳細、特徴など" oninput="autoGenDesc()"></textarea>
@@ -344,6 +351,10 @@
 
     <!-- 採寸フィールド（カテゴリーで動的変更） -->
     <div id="measureSection"></div>
+
+    <!-- 追加採寸 -->
+    <div id="extraMeasures"></div>
+    <button onclick="addExtraMeasure()" style="margin-top:10px;width:100%;background:#f5f5f5;border:1.5px dashed #ccc;border-radius:8px;padding:10px;font-size:13px;color:#888;cursor:pointer;font-family:inherit">＋ 採寸を追加（裄丈など）</button>
 
     <label>カラー<span class="opt">任意</span></label>
     <input type="text" id="color" placeholder="例：ブラック、オフホワイト、ネイビー" oninput="autoGenDesc()">
@@ -674,10 +685,51 @@ function makeMeasureField(f) {
   wrap.innerHTML = `
     <label>${f.label}</label>
     <input type="text" id="${f.id}" inputmode="decimal" placeholder="${f.placeholder}"
-           oninput="autoGenDesc()" autocomplete="off">
+           oninput="autoGenDesc()" autocomplete="off"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextMeasure(this)}">
     <div class="measure-unit">cm</div>
   `;
   return wrap;
+}
+
+function focusNextMeasure(el) {
+  const all = Array.from(document.querySelectorAll('.measure-field input, #extraMeasures input[data-val]'));
+  const idx = all.indexOf(el);
+  if (idx !== -1 && idx + 1 < all.length) all[idx + 1].focus();
+}
+
+// ===== 追加採寸 =====
+let extraMeasureCount = 0;
+function addExtraMeasure() {
+  extraMeasureCount++;
+  const id = 'extra_' + extraMeasureCount;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:8px';
+  div.innerHTML = `
+    <input type="text" data-label="${id}" placeholder="項目名（例：裄丈）"
+           style="width:100px;flex-shrink:0;font-size:14px"
+           oninput="autoGenDesc()">
+    <input type="text" data-val="${id}" inputmode="decimal" placeholder="0"
+           style="flex:1;text-align:center;font-size:16px;font-weight:700"
+           oninput="autoGenDesc()"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextMeasure(this)}">
+    <span style="font-size:11px;color:#aaa">cm</span>
+    <button onclick="this.parentElement.remove();autoGenDesc()"
+            style="background:#ffebee;border:none;border-radius:6px;padding:6px 10px;color:#e53935;cursor:pointer;font-size:13px">✕</button>
+  `;
+  document.getElementById('extraMeasures').appendChild(div);
+}
+
+function getExtraMeasures() {
+  const results = [];
+  document.querySelectorAll('#extraMeasures > div').forEach(div => {
+    const labelEl = div.querySelector('[data-label]');
+    const valEl = div.querySelector('[data-val]');
+    if (labelEl && valEl && labelEl.value.trim() && valEl.value.trim()) {
+      results.push({ label: labelEl.value.trim(), val: valEl.value.trim() });
+    }
+  });
+  return results;
 }
 
 // ===== 採寸値取得 =====
@@ -696,15 +748,29 @@ function getMeasValues() {
   return v;
 }
 
+// ===== 商品名自動生成 =====
+function autoGenItemName() {
+  const num   = (document.getElementById('mgmtNumber')?.value || '').trim();
+  const kana  = (document.getElementById('brandKatakana')?.value || '').trim();
+  const base  = (document.getElementById('itemNameBase')?.value || '').trim();
+  const parts = [num, kana, base].filter(Boolean);
+  const name  = parts.join(' ').substring(0, 40);
+  const el = document.getElementById('itemName');
+  if (el) { el.value = name; updateCharCount('itemName','nameCount',40); }
+}
+
 // ===== テンプレート生成 =====
 function generateTemplate() {
-  const brand      = (document.getElementById('brand')?.value || '').trim();
-  const itemDetail = (document.getElementById('itemDetail')?.value || '').trim();
-  const searchWord = (document.getElementById('searchWord')?.value || '').trim();
-  const sizeLabel  = (document.getElementById('sizeLabel')?.value || '').trim();
-  const color      = (document.getElementById('color')?.value || '').trim();
-  const material   = (document.getElementById('material')?.value || '').trim();
-  const v          = getMeasValues();
+  const brand        = (document.getElementById('brand')?.value || '').trim();
+  const brandKatakana= (document.getElementById('brandKatakana')?.value || '').trim();
+  const brandLine    = brand + (brandKatakana ? '（' + brandKatakana + '）' : '');
+  const itemDetail   = (document.getElementById('itemDetail')?.value || '').trim();
+  const searchWord   = (document.getElementById('searchWord')?.value || '').trim();
+  const sizeLabel    = (document.getElementById('sizeLabel')?.value || '').trim();
+  const color        = (document.getElementById('color')?.value || '').trim();
+  const material     = (document.getElementById('material')?.value || '').trim();
+  const v            = getMeasValues();
+  const extra        = getExtraMeasures();
 
   let measLine = '';
   const cfg = ITEM_TYPES[currentType];
@@ -712,6 +778,9 @@ function generateTemplate() {
     measLine = cfg.getMeasLine(v, setupBtmType);
   } else {
     measLine = cfg.getMeasLine(v);
+  }
+  if (extra.length > 0) {
+    measLine += '／' + extra.map(e => `${e.label}${e.val}`).join('／');
   }
 
   return `お得なフォロー割あります♩
@@ -726,7 +795,7 @@ ${itemDetail}
 
 
 ○ブランド
-${brand}
+${brandLine}
 
 
 ○サイズ
@@ -1074,7 +1143,7 @@ async function lookupSheet() {
       document.getElementById('sizeTag').style.display = 'inline';
       filled.push(`サイズ: ${size}`);
     }
-    if (filled.length) autoGenDesc();
+    if (filled.length) { autoGenDesc(); autoGenItemName(); }
 
     statusEl.className = 'lookup-status ok';
     statusEl.textContent = filled.length
@@ -1097,17 +1166,24 @@ async function debugSheet() {
     const data = await fetchSheetData();
     const rows = data.slice(1);
     const num = document.getElementById('mgmtNumber').value.trim();
-    let msg = `✅ 取得成功: ${rows.length}行\n`;
-    msg += `\n【列D(3)の最初の5件】\n`;
-    rows.slice(0, 5).forEach((r, i) => {
-      msg += `  行${i+2}: 「${getCellVal(r, 3) || '(空)'}」\n`;
+    let msg = `✅ 取得成功: 全${rows.length}行\n`;
+    // D列に値がある行を探す
+    const nonEmpty = [];
+    rows.forEach((r, i) => {
+      if (getCellVal(r, 3) !== '' && nonEmpty.length < 5)
+        nonEmpty.push(`  行${i+2}: 「${getCellVal(r, 3)}」`);
     });
+    msg += `\n【列D(3)に値がある最初の5行】\n`;
+    msg += nonEmpty.length > 0 ? nonEmpty.join('\n') : '  全行空 → 列インデックスが違う可能性あり';
+    msg += `\n\n【ヘッダー行のD列】「${getCellVal(data[0]||[], 3)}」`;
     if (num) {
       const row = rows.find(r => getCellVal(r, 3) === num);
-      msg += `\n【「${num}」で検索】\n`;
-      msg += row
-        ? `  見つかった！ G列=${getCellVal(row,6)||'(空)'} / AK列=${getCellVal(row,36)||'(空)'}`
-        : `  見つからなかった\n  ※D列の実際の値と入力値を確認してください`;
+      const rowNum = rows.find(r => getCellVal(r, 3) === String(Number(num)));
+      const found = row || rowNum;
+      msg += `\n\n【「${num}」で検索】\n`;
+      msg += found
+        ? `  見つかった！ G列=${getCellVal(found,6)||'(空)'} / AK列=${getCellVal(found,36)||'(空)'}`
+        : `  見つからなかった\n  ↑D列の実際の値と比較してください`;
     }
     out.textContent = msg;
   } catch(e) {
@@ -1120,8 +1196,15 @@ async function debugSheet() {
 window.addEventListener('load', () => {
   renderMeasureSection();
   updateShipping();
+  // デフォルト値
+  const shipFrom = document.getElementById('shipFrom');
+  if (shipFrom) shipFrom.value = '神奈川県';
+  const shipMethod = document.getElementById('shippingMethod');
+  if (shipMethod) shipMethod.value = 'ゆうゆうメルカリ便';
+  const condition = document.getElementById('condition');
+  if (condition) condition.value = '目立った傷や汚れなし';
   autoGenDesc();
-  if (localStorage.getItem('mercari_draft')) loadDraft();
+  try { if (localStorage.getItem('mercari_draft')) loadDraft(); } catch(e) {}
 });
 </script>
 </body>
