@@ -1293,22 +1293,27 @@ async function debugSheet() {
     for (let i = 0; i < Math.min(10, row2.length); i++) {
       msg += `  列${i}: 「${getCellVal(row2, i)}」\n`;
     }
-    // D列(3)に「管理番号」がある行を探す
-    let dataStartIdx = 1;
+    // D列(3)の全行を表示（空でない行だけ）
+    msg += `\n【D列(3) 全行スキャン（値がある行のみ）】\n`;
+    let dFound = 0;
     for (let i = 0; i < data.length; i++) {
-      if (getCellVal(data[i], 3) === '管理番号') {
-        dataStartIdx = i + 1;
-        break;
+      const v = getCellVal(data[i], 3);
+      if (v) {
+        msg += `  ${i+1}行目: 「${v}」\n`;
+        dFound++;
+        if (dFound >= 20) { msg += `  ...（省略）\n`; break; }
       }
     }
-    msg += `\n【管理番号ヘッダー検出】\n`;
-    msg += `  データ開始行: ${dataStartIdx + 1}行目（${dataStartIdx}番インデックス）\n`;
-    const dataRows = data.slice(dataStartIdx);
-    msg += `\n【列D(3)の値 最初の10件】\n`;
-    dataRows.slice(0, 10).forEach((r, i) => {
-      const v = getCellVal(r, 3);
-      if (v) msg += `  ${dataStartIdx + i + 1}行目: 「${v}」\n`;
-    });
+    if (dFound === 0) msg += `  全行空！D列にデータがありません\n`;
+
+    // G列(6)とAK列(36)も確認
+    msg += `\n【G列(6) 全行スキャン（値がある行のみ）】\n`;
+    let gFound = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = getCellVal(data[i], 6);
+      if (v) { msg += `  ${i+1}行目: 「${v}」\n`; if(++gFound>=5) { msg+=`  ...（省略）\n`; break; } }
+    }
+    if (gFound === 0) msg += `  全行空\n`;
     if (num) {
       // 全列を検索して管理番号がどこにあるか探す
       let foundCol = -1, foundRow = null;
