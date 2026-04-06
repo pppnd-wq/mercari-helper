@@ -338,7 +338,7 @@
     <label>ブランド（ローマ字・漢字）<span class="opt">任意</span><span class="filled-tag" id="brandTag" style="display:none">自動入力済み</span></label>
     <input type="text" id="brand" placeholder="例：ZARA、ユニクロ、無印良品" oninput="autoGenDesc();autoGenItemName();document.getElementById('brandTag').style.display='none'" onblur="autofillBrandKatakana()">
     <label>ブランド（カタカナ）<span class="opt">任意</span></label>
-    <input type="text" id="brandKatakana" placeholder="例：ザラ、ユニクロ、ムジルシリョウヒン" oninput="autoGenDesc();autoGenItemName()">
+    <input type="text" id="brandKatakana" placeholder="例：ザラ、ユニクロ、ムジルシリョウヒン" oninput="onKanaInput()">
 
     <label>○商品（商品の説明）<span class="opt">任意</span></label>
     <textarea id="itemDetail" rows="3" placeholder="商品の詳細、特徴など" oninput="autoGenDesc()"></textarea>
@@ -586,19 +586,55 @@ const BRAND_KANA_DICT = {
   'J.CREW':'ジェイクルー','BANANA REPULIC':'バナナリパブリック',
 };
 
+// ===== ブランド記憶（ローカルストレージで学習） =====
+function getBrandMemory() {
+  try { return JSON.parse(localStorage.getItem('brand_kana_memory') || '{}'); } catch(e) { return {}; }
+}
+function saveBrandMemory(brand, kana) {
+  if (!brand || !kana) return;
+  const mem = getBrandMemory();
+  mem[brand.toUpperCase()] = kana;
+  try { localStorage.setItem('brand_kana_memory', JSON.stringify(mem)); } catch(e) {}
+}
+
 function autofillBrandKatakana() {
   const brandEl = document.getElementById('brand');
   const kanaEl  = document.getElementById('brandKatakana');
-  if (!brandEl || !kanaEl || kanaEl.value.trim()) return; // already has katakana
+  if (!brandEl || !kanaEl) return;
   const key = brandEl.value.trim().toUpperCase();
   if (!key) return;
+
+  // すでにカタカナが入っている場合は記憶だけ更新
+  if (kanaEl.value.trim()) {
+    saveBrandMemory(key, kanaEl.value.trim());
+    return;
+  }
+
+  // 1. 記憶から検索（過去に自分で入力したもの優先）
+  const mem = getBrandMemory();
+  const fromMem = mem[key];
+  if (fromMem) {
+    kanaEl.value = fromMem;
+    autoGenDesc(); autoGenItemName();
+    showToast(`カタカナ自動入力（記憶）: ${fromMem}`);
+    return;
+  }
+
+  // 2. 辞書から検索
   const kana = BRAND_KANA_DICT[key];
   if (kana) {
     kanaEl.value = kana;
-    autoGenDesc();
-    autoGenItemName();
+    autoGenDesc(); autoGenItemName();
     showToast(`カタカナ自動入力: ${kana}`);
   }
+}
+
+// カタカナ欄を手動で変えたら記憶に保存
+function onKanaInput() {
+  autoGenDesc(); autoGenItemName();
+  const brand = (document.getElementById('brand')?.value || '').trim().toUpperCase();
+  const kana  = (document.getElementById('brandKatakana')?.value || '').trim();
+  if (brand && kana) saveBrandMemory(brand, kana);
 }
 
 // ===== アイテム種別設定 =====
@@ -1192,7 +1228,8 @@ async function lookupSheet() {
     const data = await fetchSheetData();
     // 列位置: D=3, G=6, AK=36 (0始まり) / 先頭行はヘッダーなのでスキップ
     const rows = data.slice(1);
-    const row = rows.find(r => getCellVal(r, 3) === num);
+    // 列E(4)が管理番号列（ヘッダー「半角数字でに入力↓」で確認済み）
+    const row = rows.find(r => getCellVal(r, 4) === num);
     if (!row) {
       statusEl.className = 'lookup-status err';
       statusEl.textContent = `❌ 管理番号「${num}」が見つかりませんでした`;
@@ -1249,6 +1286,12 @@ async function debugSheet() {
     for (let i = 0; i < Math.min(10, row2.length); i++) {
       msg += `  列${i}: 「${getCellVal(row2, i)}」\n`;
     }
+    // 管理番号列(E=4)に実際に入っている値を表示
+    msg += `\n【列E(4)の値 最初の10件】\n`;
+    rows.slice(0,10).forEach((r,i) => {
+      const v = getCellVal(r, 4);
+      if (v) msg += `  ${i+2}行目: 「${v}」\n`;
+    });
     if (num) {
       // 全列を検索して管理番号がどこにあるか探す
       let foundCol = -1, foundRow = null;
