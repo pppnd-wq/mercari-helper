@@ -1227,9 +1227,16 @@ async function lookupSheet() {
   try {
     const data = await fetchSheetData();
     // 列位置: D=3, G=6, AK=36 (0始まり) / 先頭行はヘッダーなのでスキップ
-    const rows = data.slice(1);
-    // 列E(4)が管理番号列（ヘッダー「半角数字でに入力↓」で確認済み）
-    const row = rows.find(r => getCellVal(r, 4) === num);
+    // D列(3)に「管理番号」と書いてある行を探して、その次の行からデータ開始
+    let dataStartIdx = 1;
+    for (let i = 0; i < data.length; i++) {
+      if (getCellVal(data[i], 3) === '管理番号') {
+        dataStartIdx = i + 1;
+        break;
+      }
+    }
+    const rows = data.slice(dataStartIdx);
+    const row = rows.find(r => getCellVal(r, 3) === num);
     if (!row) {
       statusEl.className = 'lookup-status err';
       statusEl.textContent = `❌ 管理番号「${num}」が見つかりませんでした`;
@@ -1286,11 +1293,21 @@ async function debugSheet() {
     for (let i = 0; i < Math.min(10, row2.length); i++) {
       msg += `  列${i}: 「${getCellVal(row2, i)}」\n`;
     }
-    // 管理番号列(E=4)に実際に入っている値を表示
-    msg += `\n【列E(4)の値 最初の10件】\n`;
-    rows.slice(0,10).forEach((r,i) => {
-      const v = getCellVal(r, 4);
-      if (v) msg += `  ${i+2}行目: 「${v}」\n`;
+    // D列(3)に「管理番号」がある行を探す
+    let dataStartIdx = 1;
+    for (let i = 0; i < data.length; i++) {
+      if (getCellVal(data[i], 3) === '管理番号') {
+        dataStartIdx = i + 1;
+        break;
+      }
+    }
+    msg += `\n【管理番号ヘッダー検出】\n`;
+    msg += `  データ開始行: ${dataStartIdx + 1}行目（${dataStartIdx}番インデックス）\n`;
+    const dataRows = data.slice(dataStartIdx);
+    msg += `\n【列D(3)の値 最初の10件】\n`;
+    dataRows.slice(0, 10).forEach((r, i) => {
+      const v = getCellVal(r, 3);
+      if (v) msg += `  ${dataStartIdx + i + 1}行目: 「${v}」\n`;
     });
     if (num) {
       // 全列を検索して管理番号がどこにあるか探す
